@@ -18,7 +18,11 @@ connections = [active_droop.u_ϕ ~ freq_integrator.ω,
             active_power_filter.p ~ grid.p,
             freq_integrator.ϕ ~ grid.ϕ]
 
-connected = ODESystem([],t, observed = connections, systems=[active_droop,freq_integrator,active_power_filter,grid])
+connected = ODESystem(Array{Equation, 1}(), t, [], [], observed = connections, systems=[active_droop,freq_integrator,active_power_filter,grid])
+
+flattened_system = ModelingToolkit.flatten(connected) # Turns the composite system into one
+afs = alias_elimination(flattened_system) # Connects the pins and the observations, and also removes other equalities.
+
 
 # TODO: check why this is not working
 #flattened_system = ModelingToolkit.flatten(connected)
