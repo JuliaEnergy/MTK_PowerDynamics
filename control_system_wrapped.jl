@@ -1,4 +1,4 @@
-import ModelingToolkit
+using ModelingToolkit
 const MTK = ModelingToolkit
 
 struct SystemBase
@@ -15,8 +15,8 @@ const standard_base = SystemBase()
 
 function open_loop(;sb::SystemBase=standard_base)
     MTK.@variables x(sb.t), u(sb.t), y(sb.t)
-    MTK.@parameters a, b, c
-    return MTK.ODESystem([sb.D(x) ~ a * x + b * u, y ~ c * x,], sb.t, [x, u, y], [a, b, c], pins=[u], observed=[ ], name=:open_loop)
+    MTK.@parameters a, b, c, d
+    return MTK.ODESystem([sb.D(x) ~ a * x + b * u, y ~ c * x  + d * u,], sb.t, [x, u, y], [a, b, c, d], pins=[u], observed=[ ], name=:open_loop)
 end
 
 # Strangely, MTK errors during alias_elimination when I add the input to y as in y ~ c * x + d * u.
