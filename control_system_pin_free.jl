@@ -9,7 +9,7 @@ const MTK = ModelingToolkit
 
 @variables x(t), u(t), y(t)
 @parameters a, b, c, d
-ol = ODESystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], t, name=:ol)
+ol = ODESystem([D(x) ~ a * x + b * u, y ~ c * x], t, name=:ol)
 
 ## Define a proportional control law
 
@@ -39,10 +39,8 @@ flattened_system = MTK.flatten(connected) # Turns the composite system into one
 
 aliased_flattened_system = MTK.alias_elimination(flattened_system) # Connects the pins and the observations, and also removes other equalities.
 
-# the output does not make sense, the u is set to 0.
-
 @show aliased_flattened_system.eqs 
 @show aliased_flattened_system.states # only x
-@show aliased_flattened_system.pins # 
+@show aliased_flattened_system.pins
 @show aliased_flattened_system.observed
 @show aliased_flattened_system.ps 
