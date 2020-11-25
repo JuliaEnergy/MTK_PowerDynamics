@@ -35,6 +35,9 @@ struct IOSystem # variables are all that occur in eqs, inputs and outputs are su
         @assert isempty(Set(inputs) ∩ Set(outputs)) "Outputs and Inputs need to be disjoint"
 
         # Todo: Make sure the right hand side of output equations does not contain inputs.
+        # Otherwise we can not eliminate inputs simply by plugging in the outputs, but need to potentially solve equations.
+        # One can always work around this by introducing an intermediate variable. That will show up as a constraint equation
+        # in the dynamics.
         # There might be additional constraints we need for our IO System equations, like we don't want any outputs to have two equations.
         
         new(eqs, os.states, inputs, outputs)
@@ -70,6 +73,8 @@ function connect(connections, io_systems::Array{IOSystem,1})
     eqs = vcat((ios.eqs for ios in io_systems)...)
 
     # as == is overloaded for variables one has to use isequal(x, y) to compare Terms instead.
+    # This is the core substitution: We substitute the input that we are connecting to (conn.second)
+    # with the right hand side of the output (conn.first) we're plugging into the input.
     sub_rules = [conn.second => eqs[findfirst(x -> isequal(x.lhs, conn.first), eqs)].rhs  for conn in connections]
     
     new_eqs = [eq.lhs ~ substitute(eq.rhs, sub_rules) for eq in eqs]
