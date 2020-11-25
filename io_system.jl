@@ -7,25 +7,35 @@
 using ModelingToolkit
 const MTK = ModelingToolkit
 
-struct IOSystem # states are all variables that occur in eqs, inputs and outputs are 
+"""
+IOSystems model systems of the form:
+
+dx/dt = f(x,i)
+
+o = g(x)
+
+"""
+struct IOSystem # variables are all that occur in eqs, inputs and outputs are subsets of the variables.
     eqs
     variables
     inputs
     outputs
     function IOSystem(eqs; inputs, outputs)
-        os = ODESystem(eqs, name=:sys) # We use ODESystem to analyze the equations for us
+        os = ODESystem(eqs, name=:sys) # We use ODESystem to analyze the equations for us.
+        # We could also construct from two sets of eqs: dynamics and observed.
         
-        # Make sure the outputs and inputs actually occurr in the equations
+        # Make sure the outputs and inputs actually occur in the equations
         @assert Set(inputs) ⊆ Set(os.states) "Inputs need to occur in the equations"
         @assert Set(outputs) ⊆ Set(os.states) "Outputs need to occur in the equations"
 
-        # We require output variables to occurr as left hand side in the equations
+        # We require output variables to occur as left hand side in the equations
         lhs_variables = Set([eq.lhs for eq in eqs])
         @assert Set(outputs) ⊆ Set(lhs_variables) "Outputs need to be the left hand side of an equation."
 
         @assert isempty(Set(inputs) ∩ Set(outputs)) "Outputs and Inputs need to be disjoint"
 
         # Todo: Make sure the right hand side of output equations does not contain inputs.
+        # There might be additional constraints we need for our IO System equations, like we don't want any outputs to have two equations.
         
         new(eqs, os.states, inputs, outputs)
     end
@@ -84,3 +94,25 @@ pc = IOSystem([u_c ~ k_P * y_c]; inputs = [y_c], outputs = [u_c])
 ## Connect them:
 
 closed_loop = connect([u_c => u, y => y_c], [ol, pc])
+
+##
+
+function build_io_functions(io_sys::IOSystem)
+    out_eqs_idx = [findfirst(x -> isequal(x.lhs, o), io_sys.eqs) for o in io_sys.outputs]
+
+    output_equations = io_sys.eqs[out_eqs_idx]
+    dynamic_equations = setdiff(io_sys.eqs, output_equations)
+    
+    os = ODESystem(dynamic_equations)
+    
+    not_outputs = setdiff(os.states, io_sys.outputs)
+    dynamic_states = setdiff(not_outputs, io_sys.inputs)
+    dynamic_formulas = [eq.rhs for eq in dynamic_equations]
+    g_oop, g_ip = build_function(dynamic_formulas, dynamic_states, io_sys.inputs, os.ps, os.iv; expression = Val{false})
+end
+
+##
+
+g_oop, g_ip = build_io_functions(ol)
+
+g_oop([1], [2], [3,4], 0.)
