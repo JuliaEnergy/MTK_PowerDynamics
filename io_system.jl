@@ -48,12 +48,11 @@ mutable struct IOSystem <: MTK.AbstractODESystem# variables are all that occur i
         # in the dynamics.
         # There might be additional constraints we need for our IO System equations, like we don't want any outputs to have two equations.
 
-        # Set(inputs) ⊆ Set(rhs_variables[output_eq]) does not work
-        for eq in eqs
-            if Set(output_vars) ⊆ MTK.vars(eq.lhs) # output eqn
-                @assert isempty( intersect(Set(input_vars), MTK.vars(eq.rhs)) ) "Make sure the right hand side of output equations does not contain inputs."
-            end
-        end
+        # for eq in eqs
+        #     if Set(output_vars) ⊆ MTK.vars(eq.lhs) # output eqn
+        #         @assert isempty( intersect(Set(input_vars), MTK.vars(eq.rhs)) ) "Make sure the right hand side of output equations does not contain inputs."
+        #     end
+        # end
 
         new(eqs, state_vars, input_vars, output_vars)
     end
