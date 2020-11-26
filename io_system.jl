@@ -2,7 +2,7 @@
 
 # A general note for handling equations and terms: == is overloaded and does not return bool,
 # Many of the normal ways of handling arrays don't work. Use isequal instead. Set based manipulations
-# seem fine.
+# seem fine. More generally you can check here https://docs.julialang.org/en/v1/base/collections/ which functions use isequal instead of ==
 
 using ModelingToolkit
 const MTK = ModelingToolkit
@@ -62,11 +62,17 @@ function connect(connections, io_systems::Array{IOSystem,1})
     # For now simply concatenate everything. TODO: make sure things are suitably disjoint!
     all_inputs = vcat((ios.inputs for ios in io_systems)...)
     all_outputs = vcat((ios.outputs for ios in io_systems)...)
+
+    @assert allunique(vcat(all_inputs, all_outputs))
+
     output_set = Set(all_outputs)
-    
+    input_set = Set(all_inputs)
+
     connected_inputs = [conn.second for conn in connections]
     connected_outputs = [conn.first for conn in connections]
     
+    @assert allunique(connected_inputs) "Can not connect two or more connections to same input"
+
     @assert Set(connected_inputs) ⊆ Set(all_inputs) "Must connect to inputs"
     @assert Set(connected_outputs) ⊆ Set(all_outputs) "Must connect from outputs"
     
@@ -112,12 +118,16 @@ function build_io_functions(io_sys::IOSystem)
     
     not_outputs = setdiff(os.states, io_sys.outputs)
     dynamic_states = setdiff(not_outputs, io_sys.inputs)
-    dynamic_formulas = [eq.rhs for eq in dynamic_equations]
-    g_oop, g_ip = build_function(dynamic_formulas, dynamic_states, io_sys.inputs, os.ps, os.iv; expression = Val{false})
+    dynamic_formulas = [eq.rhs for eq in dynamic_equations] # Here we assume that the left hand side is d/dx.
+
+    # There is a subtlty here with ordering. The equations in dynamic_formulas and the dynamic_states need to match up so the left hand side of 
+    f_oop, f_ip = build_function(dynamic_formulas, dynamic_states, io_sys.inputs, os.ps, os.iv; expression = Val{false})
 end
+
+# We need an IOFunctions object that contains a compiled f, a compiled g, mass matrix for f, symbols and jacobians.
 
 ##
 
-g_oop, g_ip = build_io_functions(ol)
+f_oop, f_ip = build_io_functions(ol)
 
-g_oop([1], [2], [3,4], 0.)
+f_oop([1], [2], [3,4], 0.)
