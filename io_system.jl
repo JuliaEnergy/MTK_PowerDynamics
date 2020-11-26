@@ -122,6 +122,8 @@ function build_io_functions(io_sys::IOSystem)
 
     # There is a subtlty here with ordering. The equations in dynamic_formulas and the dynamic_states need to match up
     # so the left hand side ofthe equations matches the order of the states. Maybe this is already guaranteed as a consequence of the way ODESystem and setdiff work.
+    # the function MTK.vars can extract variables from Differentials on the left hand side.
+
     f_oop, f_ip = build_function(dynamic_formulas, dynamic_states, io_sys.inputs, os.ps, os.iv; expression = Val{false})
 end
 
