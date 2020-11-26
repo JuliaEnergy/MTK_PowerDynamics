@@ -7,6 +7,8 @@
 using ModelingToolkit
 const MTK = ModelingToolkit
 
+##
+
 """
 IOSystems model systems of the form:
 
@@ -15,32 +17,45 @@ dx/dt = f(x,i)
 o = g(x)
 
 """
-struct IOSystem # variables are all that occur in eqs, inputs and outputs are subsets of the variables.
-    eqs
-    variables
-    inputs
-    outputs
+mutable struct IOSystem <: MTK.AbstractODESystem# variables are all that occur in eqs, inputs and outputs are subsets of the variables.
+    eqs::Vector{Equation}
+    variables::Vector{Variable}
+    inputs::Vector{Variable}
+    outputs::Vector{Variable}
     function IOSystem(eqs; inputs, outputs)
         os = ODESystem(eqs, name=:sys) # We use ODESystem to analyze the equations for us.
         # We could also construct from two sets of eqs: dynamics and observed.
         
+        input_vars = Variable.(inputs)
+        output_vars = Variable.(outputs)
+        state_vars = setdiff(os.states, Variable.(inputs ∪ outputs))
         # Make sure the outputs and inputs actually occur in the equations
-        @assert Set(inputs) ⊆ Set(os.states) "Inputs need to occur in the equations"
-        @assert Set(outputs) ⊆ Set(os.states) "Outputs need to occur in the equations"
+        @assert Set(input_vars) ⊆ Set(os.states) "Inputs need to occur in the equations"
+        @assert Set(output_vars) ⊆ Set(os.states) "Outputs need to occur in the equations"
+        @assert isempty(Set(input_vars) ∩ Set(output_vars)) "Outputs and Inputs need to be disjoint"
+        @assert isequal( Set(input_vars) ∪ Set(output_vars) ∪ Set(state_vars), Set(os.states) )
+        
 
         # We require output variables to occur as left hand side in the equations
-        lhs_variables = Set([eq.lhs for eq in eqs])
+        lhs_variables = [eq.lhs for eq in eqs]
+        rhs_variables = [eq.rhs for eq in eqs]
         @assert Set(outputs) ⊆ Set(lhs_variables) "Outputs need to be the left hand side of an equation."
-
-        @assert isempty(Set(inputs) ∩ Set(outputs)) "Outputs and Inputs need to be disjoint"
+      
 
         # Todo: Make sure the right hand side of output equations does not contain inputs.
         # Otherwise we can not eliminate inputs simply by plugging in the outputs, but need to potentially solve equations.
         # One can always work around this by introducing an intermediate variable. That will show up as a constraint equation
         # in the dynamics.
         # There might be additional constraints we need for our IO System equations, like we don't want any outputs to have two equations.
-        
-        new(eqs, os.states, inputs, outputs)
+
+        # Set(inputs) ⊆ Set(rhs_variables[output_eq]) does not work
+        for eq in eqs
+            if Set(output_vars) ⊆ MTK.vars(eq.lhs) # output eqn
+                @assert isempty( intersect(Set(input_vars), MTK.vars(eq.rhs)) ) "Make sure the right hand side of output equations does not contain inputs."
+            end
+        end
+
+        new(eqs, state_vars, input_vars, output_vars)
     end
 end
 
@@ -50,9 +65,9 @@ end
 @derivatives D'~t
 
 @variables x(t), u(t), y(t)
-@parameters a, b, c
+@parameters a, b, c, d
 
-ol = IOSystem([D(x) ~ a * x + b * u, y ~ c * x], inputs = [u], outputs = [y])
+ol = IOSystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], inputs = [u], outputs = [y])
 
 ##
 
@@ -105,6 +120,8 @@ pc = IOSystem([u_c ~ k_P * y_c]; inputs = [y_c], outputs = [u_c])
 ## Connect them:
 
 closed_loop = connect([u_c => u, y => y_c], [ol, pc])
+
+
 
 ##
 
