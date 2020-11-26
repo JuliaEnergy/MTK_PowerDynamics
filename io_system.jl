@@ -120,7 +120,8 @@ function build_io_functions(io_sys::IOSystem)
     dynamic_states = setdiff(not_outputs, io_sys.inputs)
     dynamic_formulas = [eq.rhs for eq in dynamic_equations] # Here we assume that the left hand side is d/dx.
 
-    # There is a subtlty here with ordering. The equations in dynamic_formulas and the dynamic_states need to match up so the left hand side of 
+    # There is a subtlty here with ordering. The equations in dynamic_formulas and the dynamic_states need to match up
+    # so the left hand side ofthe equations matches the order of the states. Maybe this is already guaranteed as a consequence of the way ODESystem and setdiff work.
     f_oop, f_ip = build_function(dynamic_formulas, dynamic_states, io_sys.inputs, os.ps, os.iv; expression = Val{false})
 end
 
