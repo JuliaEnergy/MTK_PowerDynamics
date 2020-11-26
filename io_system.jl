@@ -128,7 +128,19 @@ function build_io_functions(io_sys::IOSystem)
 end
 
 # We need an IOFunctions object that contains a compiled f, a compiled g, mass matrix for f, symbols and jacobians.
-
+struct IOFunction
+    f_ip
+    f_oop
+    g_ip
+    g_oop
+    mass_matrix
+    dynamic_symbols
+    input_symbols
+    output_symbols
+    parameter_symbols
+    f_jac
+    g_jac
+end
 ##
 
 f_oop, f_ip = build_io_functions(ol)
