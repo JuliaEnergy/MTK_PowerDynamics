@@ -19,21 +19,19 @@ o = g(x)
 """
 mutable struct IOSystem <: MTK.AbstractODESystem# variables are all that occur in eqs, inputs and outputs are subsets of the variables.
     eqs::Vector{Equation}
-    variables::Vector{Variable}
-    inputs::Vector{Variable}
-    outputs::Vector{Variable}
+    variables
+    inputs
+    outputs
     function IOSystem(eqs; inputs, outputs)
         os = ODESystem(eqs, name=:sys) # We use ODESystem to analyze the equations for us.
         # We could also construct from two sets of eqs: dynamics and observed.
         
-        input_vars = Variable.(inputs)
-        output_vars = Variable.(outputs)
-        state_vars = setdiff(os.states, Variable.(inputs ∪ outputs))
+        state_vars = setdiff(os.states, inputs ∪ outputs)
         # Make sure the outputs and inputs actually occur in the equations
-        @assert Set(input_vars) ⊆ Set(os.states) "Inputs need to occur in the equations"
-        @assert Set(output_vars) ⊆ Set(os.states) "Outputs need to occur in the equations"
-        @assert isempty(Set(input_vars) ∩ Set(output_vars)) "Outputs and Inputs need to be disjoint"
-        @assert isequal( Set(input_vars) ∪ Set(output_vars) ∪ Set(state_vars), Set(os.states) )
+        @assert Set(inputs) ⊆ Set(os.states) "Inputs need to occur in the equations"
+        @assert Set(outputs) ⊆ Set(os.states) "Outputs need to occur in the equations"
+        @assert isempty(Set(inputs) ∩ Set(outputs)) "Outputs and Inputs need to be disjoint"
+        @assert isequal( Set(inputs) ∪ Set(outputs) ∪ Set(state_vars), Set(os.states) )
         
 
         # We require output variables to occur as left hand side in the equations
@@ -54,7 +52,7 @@ mutable struct IOSystem <: MTK.AbstractODESystem# variables are all that occur i
         #     end
         # end
 
-        new(eqs, state_vars, input_vars, output_vars)
+        new(eqs, state_vars, inputs, outputs)
     end
 end
 
@@ -67,6 +65,24 @@ end
 @parameters a, b, c, d
 
 ol = IOSystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], inputs = [u], outputs = [y])
+
+##
+
+# A note on namespacing in MTK:
+os = ODESystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], name=:sys1)
+
+@show os.y # sys1₊y(t)
+@show os.eqs[2].lhs # y(t)
+@show os.states[2] # y(t)
+
+@variables z(t)
+eqs2 = vcat(os.eqs, [D(z) ~ os.y]) # This looks natural for adding an equation to a system but is incorrect:
+os2 = ODESystem(eqs2)
+@show os2.states[[2,5]] # [y(t), sys1₊y(t)] so the namespaced access with os.y and the variable in the equation end up being different.
+
+# Accessing variables through the dot notation is namespaced, and combining them namespaces them, too.
+# There are a number of undocumented helperfunctions (like namespace_equations) that do what you would expect them to.
+# We need to think about whether/how we want to namespace components.
 
 ##
 
