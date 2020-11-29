@@ -81,8 +81,21 @@ os2 = ODESystem(eqs2)
 @show os2.states[[2,5]] # [y(t), sys1₊y(t)] so the namespaced access with os.y and the variable in the equation end up being different.
 
 # Accessing variables through the dot notation is namespaced, and combining them namespaces them, too.
-# There are a number of undocumented helperfunctions (like namespace_equations) that do what you would expect them to.
-# We need to think about whether/how we want to namespace components.
+# There are a number of undocumented helperfunctions (like namespace_equations that gets namespace equations)
+# that do what you would expect them to.
+
+eqs3 = MTK.namespace_equations(os)
+os3 = ODESystem(vcat(eqs3, [D(z) ~ os.y]), name=:newsys)
+os3.states # this is a namespaced 4 equation array, but now...
+try 
+    os3.y 
+catch err @assert err isa ErrorException end # ... this is an error, and this:
+os3.sys1₊y # newsys₊sys1₊y(t)
+# is awkward and error prone.
+
+# We might want to explore this space a little. As there might be many u and y variables flying around, namespacing is important.
+# We probably don't want it to be automatic. I am leaning towards adding optional namespacing to connect, and checking
+# for duplicate variable names when connecting systems.
 
 ##
 
@@ -160,6 +173,8 @@ function build_io_functions(io_sys::IOSystem)
 end
 
 # We need an IOFunctions object that contains a compiled f, a compiled g, mass matrix for f, symbols and jacobians.
+
+#=
 struct IOFunction
     f_ip
     f_oop
@@ -173,6 +188,8 @@ struct IOFunction
     f_jac
     g_jac
 end
+=#
+
 ##
 
 f_oop, f_ip = build_io_functions(ol)
