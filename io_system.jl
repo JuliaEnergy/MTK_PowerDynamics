@@ -9,6 +9,9 @@ const MTK = ModelingToolkit
 
 ##
 
+# Right now we don't define IOSystem as a subtype of MTK.AbstractSystem as we don't
+# define all neccessary fields (leading to StackOverflow on field access).
+
 """
 IOSystems model systems of the form:
 
@@ -17,7 +20,7 @@ dx/dt = f(x,i)
 o = g(x)
 
 """
-mutable struct IOSystem <: MTK.AbstractODESystem# variables are all that occur in eqs, inputs and outputs are subsets of the variables.
+mutable struct IOSystem # variables are all that occur in eqs, inputs and outputs are subsets of the variables.
     eqs::Vector{Equation}
     variables
     inputs
@@ -66,7 +69,22 @@ end
 
 ol = IOSystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], inputs = [u], outputs = [y])
 
+
 ##
+
+# A note on types in MTK, explicit type signatures are tricky because there are a lot of types floating around:
+
+os = ODESystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], name=:sys1)
+@show typeof(x) # typeof(x) = Num
+@show typeof(x.val) # typeof(x) = Term{Real}
+@show typeof(os.states[1]) # typeof(os.states[1]) = Term{Real}
+
+@show isequal(x, os.states[1]) # true
+@show Num <: Term{Real} # false
+@show Term{Real} <: Num # false
+
+##
+
 
 # A note on namespacing in MTK:
 os = ODESystem([D(x) ~ a * x + b * u, y ~ c * x + d * u], name=:sys1)
@@ -86,7 +104,7 @@ os2 = ODESystem(eqs2)
 
 eqs3 = MTK.namespace_equations(os)
 os3 = ODESystem(vcat(eqs3, [D(z) ~ os.y]), name=:newsys)
-os3.states # this is a namespaced 4 equation array, but now...
+@show os3.states # this is a namespaced 4 equation array, but now...
 try 
     os3.y 
 catch err @assert err isa ErrorException end # ... this is an error, and this:
@@ -150,7 +168,6 @@ pc = IOSystem([u_c ~ k_P * y_c]; inputs = [y_c], outputs = [u_c])
 closed_loop = connect([u_c => u, y => y_c], [ol, pc])
 
 
-
 ##
 
 function build_io_functions(io_sys::IOSystem)
@@ -195,3 +212,34 @@ end
 f_oop, f_ip = build_io_functions(ol)
 
 f_oop([1], [2], [3,4], 0.)
+
+##
+
+using NetworkDynamics
+
+struct NetworkLayer
+    vertex_vars
+    edge_vars
+    aggregate_vars
+    aggregate # The function that aggregates
+end
+
+function build_nd_vertex(ios::IOSystem, nl::NetworkLayer)
+    @assert length(nl.aggregate_vars) == length(ios.inputs)
+    @assert length(nl.vertex_vars) <= length(ios.variables)
+
+    # So ordering is crucial to get all of this right. We need to check and double check our ordering guarantees
+    # for building io functions.
+
+    @assert all(isequal.(ios.inputs, nl.aggregate_vars)) "Vertex IO system needs to have aggregate variables as inputs"
+    @assert all(isequal.(ios.variables[1:length(nl.vertex_vars)], nl.vertex_vars)) "The first IO System variables need to match the vertex_variables"
+
+    const agg = nl.aggregate
+
+    f_oop, f_ip = build_io_functions(ios)
+    f_vert(dx,x,es,ed,p,t) = f_ip(dx, x, agg(es,ed), p, t)
+
+    ODEVertex(f_vert, dim, mass_matrix, sym)
+end
+
+##
