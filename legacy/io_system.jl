@@ -68,6 +68,8 @@ end
 @variables x(t), u(t), y(t)
 @parameters a, b, c, d
 
+##
+
 IOSystem([D(x) ~ a * x + b * u, y ~ c * x], inputs = [u], outputs = [y])
 
 ##
