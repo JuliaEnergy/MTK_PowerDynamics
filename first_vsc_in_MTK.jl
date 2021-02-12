@@ -1,6 +1,7 @@
 # First attempt at VSC in BlockSystems (nee IOSystems)
 
-using IOSystems
+# Pkg.add(url="https://github.com/hexaeder/IOSystems_prototype")
+using BlockSystems
 using ModelingToolkit
 
 ## Common time
@@ -80,9 +81,8 @@ plot(sol)
 @variables p(t) q(t)
 
 infinite_grid = IOBlock([
-  p ~ real(conjugate(Y) * v * e^(im * ϕ) * (v * e^(- im * ϕ) - 1)),
-  p ~ real(conjugate(Y) * v * e^(im * ϕ) * (v * e^(- im * ϕ) - 1)),
-  ], [v, ϕ], [p, q], name = :droop)
+  p ~ real(conj(Y) * v * exp(1im * ϕ) * (v * exp(- 1im * ϕ) - 1)),
+  p ~ real(conj(Y) * v * exp(1im * ϕ) * (v * exp(- 1im * ϕ) - 1))], [v, ϕ], [p, q], name = :droop)
 
 ##
 

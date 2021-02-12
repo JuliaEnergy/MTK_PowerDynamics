@@ -1,6 +1,7 @@
 [deps]
-IOSystems = "4663d367-db1f-4bef-81e7-dc1bd7f7b428"
+BlockSystems = "4663d367-db1f-4bef-81e7-dc1bd7f7b428"
 LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 NetworkDynamics = "22e9dc34-2a0d-11e9-0de0-8588d035468b"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
